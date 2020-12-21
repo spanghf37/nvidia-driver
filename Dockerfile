@@ -15,13 +15,19 @@ ARG PRIVATE_KEY
 ARG KERNEL_VERSION
 ENV KERNEL_VERSION=${KERNEL_VERSION:-4.18.0-147.3.1.el8_1.x86_64}
 
-
-
 COPY nvidia-driver-disconnected /usr/local/bin/nvidia-driver-disconnected
+
+# Required to build on specific RHCOS kernel version (not RHEL kernel version)
+RUN yum config-manager --set-enabled rhel-8-for-x86_64-baseos-eus-rpms
+
+# Required to build on specific RHCOS kernel version (not RHEL kernel version)
+RUN dnf install -y "kernel-headers-${KERNEL_VERSION}" "kernel-devel-${KERNEL_VERSION}" --releasever=8.2
+
+# Required to build on specific RHCOS kernel version (not RHEL kernel version)
+RUN yum config-manager --set-disabled rhel-8-for-x86_64-baseos-eus-rpms
 
 RUN dnf install --setopt tsflags=nodocs -y ca-certificates curl gcc glibc.i686 make cpio kmod \
     elfutils-libelf elfutils-libelf-devel \
-    "kernel-headers-${KERNEL_VERSION}" "kernel-devel-${KERNEL_VERSION}" \
     && rm -rf /var/cache/yum/*
 
 RUN curl -fsSL -o /usr/local/bin/donkey https://github.com/3XX0/donkey/releases/download/v1.1.0/donkey \
@@ -43,7 +49,10 @@ RUN cd /tmp \
     && mv LICENSE mkprecompiled kernel /usr/src/nvidia-$DRIVER_VERSION \
     && sed '9,${/^\(kernel\|LICENSE\)/!d}' .manifest > /usr/src/nvidia-$DRIVER_VERSION/.manifest \
     && rm -rf /tmp/* \
-    && dnf download -y kernel-core-${KERNEL_VERSION} --downloaddir=/tmp/ \
+    # Required to build on specific RHCOS kernel version (not RHEL kernel version)
+    && yum config-manager --set-enabled rhel-8-for-x86_64-baseos-eus-rpms \
+    # Required to build on specific RHCOS kernel version (not RHEL kernel version)
+    && dnf download -y kernel-core-${KERNEL_VERSION} --downloaddir=/tmp/ --releasever=8.2 \
     && rm -rf /var/cache/yum
 
 WORKDIR /usr/src/nvidia-$DRIVER_VERSION
